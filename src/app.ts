@@ -5,6 +5,8 @@ import bodyParser from "body-parser";
 import type { Request, Response } from "express";
 import morgan from "morgan";
 
+import connectToDB from "./config/db";
+
 const app = express();
 config();
 app.use(cookieParser());
@@ -23,6 +25,12 @@ app.get("/", (req: Request, res: Response) => {
   res.send("Hello, World!");
 });
 
-app.listen(port, () => {
-  console.error(`Server is running on the port ${port}`);
-});
+connectToDB()
+  .then(() => {
+    app.listen(port, () => {
+      console.log(`Connected to DB and server running on port ${port}`);
+    });
+  })
+  .catch(() => {
+    console.error("Error connecting to DB");
+  });
