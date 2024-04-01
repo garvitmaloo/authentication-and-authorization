@@ -1,11 +1,13 @@
 import express from "express";
+import type { Request, Response, NextFunction } from "express";
 import cookieParser from "cookie-parser";
 import { config } from "dotenv";
 import bodyParser from "body-parser";
-import type { Request, Response } from "express";
 import morgan from "morgan";
 
 import connectToDB from "./config/db";
+import { authRouter } from "./routes/auth";
+import { handleErrors } from "./middleware/handleErrors";
 
 const app = express();
 config();
@@ -21,8 +23,11 @@ app.use(morgan("tiny"));
 
 const port = process.env.PORT ?? 9000;
 
-app.get("/", (req: Request, res: Response) => {
-  res.send("Hello, World!");
+// APP ROUTES
+app.use("/api/auth", authRouter);
+
+app.use((error: Error, req: Request, res: Response, next: NextFunction) => {
+  handleErrors(error, req, res, next);
 });
 
 connectToDB()
