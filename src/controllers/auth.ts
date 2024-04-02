@@ -1,7 +1,12 @@
 import type { NextFunction, Request, Response } from "express";
 
 import type { ISignupInput } from "../types";
-import { sendOtpService, userSignupService } from "../service/auth";
+import {
+  sendOtpService,
+  userSignupService,
+  verifyOtpService
+} from "../service/auth";
+import { anyOneConditionTrue } from "../utils/common";
 
 export const handlePostSignup = async (
   req: Request,
@@ -46,4 +51,42 @@ export const handleGetOtp = async (
   }
 
   res.status(200).json(response);
+};
+
+export const handlePatchOtpVerification = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  const { email, otp }: { email: string; otp: number } = req.body;
+
+  const conditions = [
+    email === undefined,
+    otp === undefined,
+    email?.trim() === ""
+  ];
+
+  if (anyOneConditionTrue(conditions)) {
+    res.statusCode = 400;
+    next(new Error("Please provide email and otp"));
+  }
+
+  const response = await verifyOtpService(email, otp);
+
+  if (response.error !== null) {
+    res.statusCode = response.error.statusCode;
+    next(new Error(response.error.message));
+  }
+
+  if (response.result !== null) {
+    res
+      .status(200)
+      .cookie("token", response.result.token, {
+        maxAge: 600000 // 10 minutes
+      })
+      .json({
+        error: null,
+        result: "Email verified"
+      });
+  }
 };
