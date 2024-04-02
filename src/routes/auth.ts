@@ -4,7 +4,7 @@ import express from "express";
 import validateSignupInput from "../middleware/validateSignupInput";
 import {
   handlePostSignup,
-  handleGetOtp,
+  handlePostOtp,
   handlePatchOtpVerification
 } from "../controllers/auth";
 
@@ -12,7 +12,7 @@ const authRouter = express.Router();
 
 authRouter.post("/signup", validateSignupInput, handlePostSignup);
 
-authRouter.get("/otp", handleGetOtp);
+authRouter.post("/otp", handlePostOtp);
 
 authRouter.patch("/verify-otp", handlePatchOtpVerification);
 

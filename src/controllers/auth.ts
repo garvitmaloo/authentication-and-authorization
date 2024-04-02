@@ -29,7 +29,7 @@ export const handlePostSignup = async (
   });
 };
 
-export const handleGetOtp = async (
+export const handlePostOtp = async (
   req: Request,
   res: Response,
   next: NextFunction
