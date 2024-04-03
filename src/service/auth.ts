@@ -1,10 +1,12 @@
 import { hash } from "bcrypt";
+import type { SendEmailRequest } from "aws-sdk/clients/ses";
 import jwt from "jsonwebtoken";
 
 import User from "../models/user";
 import OTP from "../models/otp";
 import type { IStandardResponse, ISignupInput, IUser } from "../types";
 import { generateUniqueNumber } from "../utils/common";
+import { AWS } from "../config/aws-sdk";
 
 export const userSignupService = async (
   signupDetails: ISignupInput
@@ -46,48 +48,90 @@ export const userSignupService = async (
 export const sendOtpService = async (
   email: string
 ): Promise<IStandardResponse<string>> => {
-  const userRecord = await User.findOne({ email });
+  try {
+    const userRecord = await User.findOne({ email });
 
-  if (userRecord === null) {
+    if (userRecord === null) {
+      return {
+        error: {
+          message: "No user found with this email",
+          statusCode: 400
+        },
+        result: null
+      };
+    }
+
+    if (userRecord.emailVerified) {
+      return {
+        error: {
+          message: "Email has already been verified",
+          statusCode: 403
+        },
+        result: null
+      };
+    }
+
+    // generate otp
+    const otp = Number(generateUniqueNumber(6));
+    const generatedAt = new Date();
+
+    if (process.env.SOURCE_EMAIL_ADDRESS === undefined) {
+      return {
+        error: {
+          statusCode: 500,
+          message: "SOURCE_EMAIL_ADDRESS not found in env"
+        },
+        result: null
+      };
+    }
+
+    // send otp via email - will not send email in "sandbox" mode. Use "production" mode for sending email.
+    const params: SendEmailRequest = {
+      Destination: {
+        ToAddresses: [email]
+      },
+      Message: {
+        Body: {
+          Text: {
+            Charset: "UTF-8",
+            Data: `Your OTP is ${otp}`
+          }
+        },
+        Subject: {
+          Charset: "UTF-8",
+          Data: "OTP for Signup"
+        }
+      },
+      Source: process.env.SOURCE_EMAIL_ADDRESS
+    };
+
+    const sendEmailPromise = new AWS.SES().sendEmail(params).promise();
+    await sendEmailPromise;
+
+    // make/update entry in database
+    const otpRecord = await OTP.findOne({ email });
+
+    if (otpRecord === null) {
+      const newOtpRecord = new OTP({ otp, email, generatedAt });
+      await newOtpRecord.save();
+    }
+
+    await OTP.updateOne({ email }, { otp });
+
+    return {
+      error: null,
+      result: "OTP sent"
+    };
+  } catch (err) {
+    console.error("Something went wrong while sending OTP - ", err);
     return {
       error: {
-        message: "No user found with this email",
-        statusCode: 400
+        statusCode: 500,
+        message: "Something went wrong while sending OTP."
       },
       result: null
     };
   }
-
-  if (userRecord.emailVerified) {
-    return {
-      error: {
-        message: "Email has already been verified",
-        statusCode: 403
-      },
-      result: null
-    };
-  }
-
-  // generate otp
-  const otp = Number(generateUniqueNumber(6));
-  const generatedAt = new Date();
-
-  // send otp via email
-
-  // make/update entry in database
-  const otpRecord = await OTP.findOne({ email });
-
-  if (otpRecord === null) {
-    const newOtpRecord = new OTP({ otp, email, generatedAt });
-    await newOtpRecord.save();
-  }
-
-  await OTP.updateOne({ email }, { otp });
-
-  return {
-    error: null,
-    result: "OTP sent"
-  };
 };
 
 export const verifyOtpService = async (
