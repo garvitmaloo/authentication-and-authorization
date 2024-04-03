@@ -7,7 +7,9 @@ import {
   handlePostOtp,
   handlePatchOtpVerification,
   handleGetGoogleLogin,
-  handleGetGoogleRedirect
+  handleGetGoogleRedirect,
+  handleGetGithubLogin,
+  handleGetGithubRedirect
 } from "../controllers/auth";
 
 const authRouter = express.Router();
@@ -21,5 +23,9 @@ authRouter.patch("/verify-otp", handlePatchOtpVerification);
 authRouter.get("/google", handleGetGoogleLogin);
 
 authRouter.get("/google/redirect", handleGetGoogleRedirect);
+
+authRouter.get("/github", handleGetGithubLogin);
+
+authRouter.get("/github/redirect", handleGetGithubRedirect);
 
 export { authRouter };

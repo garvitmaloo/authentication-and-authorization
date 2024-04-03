@@ -156,3 +156,70 @@ export const handleGetGoogleRedirect = async (
     error: null
   });
 };
+
+export const handleGetGithubLogin = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID;
+  const GITHUB_REDIRECT_URL = process.env.GITHUB_REDIRECT_URL;
+
+  res.redirect(
+    `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&response_type=code&scope=read:user%20user:email&redirect_uri=${GITHUB_REDIRECT_URL}`
+  );
+};
+
+export const handleGetGithubRedirect = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID;
+  const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET;
+
+  const { code } = req.query;
+
+  try {
+    const { data }: { data: string } = await axios.post(
+      "https://github.com/login/oauth/access_token",
+      {
+        client_id: GITHUB_CLIENT_ID,
+        client_secret: GITHUB_CLIENT_SECRET,
+        code
+      }
+    );
+
+    const accessToken = data.split("=")[1].split("&")[0];
+
+    const axiosGetUserInfoHeaders = {
+      headers: {
+        Authorization: "Bearer " + accessToken
+      }
+    };
+    const promises = Promise.all([
+      axios.get("https://api.github.com/user", axiosGetUserInfoHeaders),
+      axios.get("https://api.github.com/user/emails", axiosGetUserInfoHeaders)
+    ]);
+
+    const response = await promises;
+    const {
+      data: { name }
+    } = response[0];
+    const { data: userEmails } = response[1];
+    const primaryEmail: string = userEmails.find((e: any) => e.primary)?.email;
+
+    const result = await userSignupService({
+      fullName: name,
+      email: primaryEmail
+    });
+
+    if (result.error !== null) {
+      res.statusCode = result.error.statusCode;
+      next(new Error(result.error.message));
+    }
+
+    res.status(201).json(result);
+  } catch (err) {
+    res.status(500).send("Something went wrong");
+  }
+};
