@@ -19,8 +19,8 @@ const validateSignupInput = (
     email?.trim() === "",
     password?.trim() === "",
     !validator.isEmail(email),
-    !validator.isLength(password, { min: 8, max: 32 }),
-    !validator.isStrongPassword(password, {
+    !validator.isLength(password!, { min: 8, max: 32 }),
+    !validator.isStrongPassword(password!, {
       minLength: 8,
       minLowercase: 1,
       minUppercase: 1,

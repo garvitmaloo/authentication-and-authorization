@@ -23,6 +23,7 @@ module.exports = {
     "no-console": "warn",
     "@typescript-eslint/quotes": ["error", "double"],
     "@typescript-eslint/semi": "off",
-    "@typescript-eslint/member-delimiter-style": "off"
+    "@typescript-eslint/member-delimiter-style": "off",
+    "@typescript-eslint/no-non-null-assertion": "off"
   }
 };
