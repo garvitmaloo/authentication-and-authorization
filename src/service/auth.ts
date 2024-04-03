@@ -25,6 +25,26 @@ export const userSignupService = async (
     };
   }
 
+  // password undefined for users being created by OAuth
+  if (password === undefined) {
+    const OAuthUser = new User({
+      fullName,
+      email,
+      emailVerified: true
+    });
+
+    await OAuthUser.save();
+
+    return {
+      result: {
+        fullName: OAuthUser.fullName,
+        email: OAuthUser.email,
+        emailVerified: OAuthUser.emailVerified
+      },
+      error: null
+    };
+  }
+
   const hashedPassword = await hash(password, 10);
 
   const user = new User({

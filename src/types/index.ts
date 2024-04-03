@@ -9,7 +9,7 @@ export interface IStandardResponse<T> {
 export interface ISignupInput {
   fullName: string;
   email: string;
-  password: string;
+  password?: string;
 }
 
 export interface IUser {
