@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
+import axios from "axios";
 
 import type { ISignupInput } from "../types";
 import {
@@ -89,4 +90,69 @@ export const handlePatchOtpVerification = async (
         result: "Email verified"
       });
   }
+};
+
+export const handleGetGoogleLogin = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+  const REDIRECT_URI = process.env.GOOGLE_REDIRECT_URL;
+
+  const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=code&scope=profile email`;
+  res.redirect(url);
+};
+
+export const handleGetGoogleRedirect = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  const { code } = req.query;
+
+  if (code === undefined) {
+    res.statusCode = 500;
+    res.json({
+      error: {
+        statusCode: 500,
+        message: "Something went wrong"
+      },
+      result: null
+    });
+    return;
+  }
+
+  const { data } = await axios.post("https://oauth2.googleapis.com/token", {
+    code,
+    client_id: process.env.GOOGLE_CLIENT_ID,
+    client_secret: process.env.GOOGLE_CLIENT_SECRET,
+    redirect_uri: process.env.GOOGLE_REDIRECT_URL,
+    grant_type: "authorization_code"
+  });
+
+  const { access_token: accessToken } = data;
+
+  const { data: profile } = await axios.get(
+    "https://www.googleapis.com/oauth2/v1/userinfo",
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`
+      }
+    }
+  );
+
+  const { email, name } = profile;
+
+  const response = await userSignupService({ fullName: name, email });
+
+  if (response.error !== null) {
+    res.statusCode = response.error.statusCode;
+    next(new Error(response.error.message));
+    return;
+  }
+
+  res.status(201).json({
+    result: response.result,
+    error: null
+  });
 };

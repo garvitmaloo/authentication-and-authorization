@@ -5,7 +5,9 @@ import validateSignupInput from "../middleware/validateSignupInput";
 import {
   handlePostSignup,
   handlePostOtp,
-  handlePatchOtpVerification
+  handlePatchOtpVerification,
+  handleGetGoogleLogin,
+  handleGetGoogleRedirect
 } from "../controllers/auth";
 
 const authRouter = express.Router();
@@ -15,5 +17,9 @@ authRouter.post("/signup", validateSignupInput, handlePostSignup);
 authRouter.post("/otp", handlePostOtp);
 
 authRouter.patch("/verify-otp", handlePatchOtpVerification);
+
+authRouter.get("/google", handleGetGoogleLogin);
+
+authRouter.get("/google/redirect", handleGetGoogleRedirect);
 
 export { authRouter };
