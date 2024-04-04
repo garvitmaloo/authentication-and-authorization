@@ -17,3 +17,9 @@ export interface IUser {
   email: string;
   emailVerified: boolean;
 }
+
+export interface IResource {
+  name: string;
+  ownerEmail: string;
+  type: string;
+}

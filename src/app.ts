@@ -7,6 +7,7 @@ import morgan from "morgan";
 
 import connectToDB from "./config/db";
 import { authRouter } from "./routes/auth";
+import { resourcesRouter } from "./routes/resources";
 import { handleErrors } from "./middleware/handleErrors";
 
 const app = express();
@@ -25,6 +26,7 @@ const port = process.env.PORT ?? 9000;
 
 // APP ROUTES
 app.use("/api/auth", authRouter);
+app.use("/api/resources", resourcesRouter);
 
 app.use((error: Error, req: Request, res: Response, next: NextFunction) => {
   handleErrors(error, req, res, next);
