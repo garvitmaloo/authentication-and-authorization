@@ -20,3 +20,31 @@ export const fetchAllResourcesService = async (
     };
   }
 };
+
+export const createNewResource = async (
+  resourceDetails: IResource
+): Promise<IStandardResponse<IResource>> => {
+  const { ownerEmail, name, type } = resourceDetails;
+
+  try {
+    const newResource = new Resource({
+      name,
+      ownerEmail,
+      type
+    });
+    await newResource.save();
+
+    return {
+      error: null,
+      result: newResource
+    };
+  } catch (err) {
+    return {
+      error: {
+        statusCode: 500,
+        message: (err as Error).message
+      },
+      result: null
+    };
+  }
+};
