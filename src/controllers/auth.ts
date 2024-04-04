@@ -1,8 +1,9 @@
 import type { NextFunction, Request, Response } from "express";
-import axios from "axios";
 
 import type { ISignupInput } from "../types";
 import {
+  gitHubRedirectService,
+  googleRedirectService,
   sendOtpService,
   userSignupService,
   verifyOtpService
@@ -112,38 +113,10 @@ export const handleGetGoogleRedirect = async (
 
   if (code === undefined) {
     res.statusCode = 500;
-    res.json({
-      error: {
-        statusCode: 500,
-        message: "Something went wrong"
-      },
-      result: null
-    });
-    return;
+    next(new Error("Something went wrong"));
   }
 
-  const { data } = await axios.post("https://oauth2.googleapis.com/token", {
-    code,
-    client_id: process.env.GOOGLE_CLIENT_ID,
-    client_secret: process.env.GOOGLE_CLIENT_SECRET,
-    redirect_uri: process.env.GOOGLE_REDIRECT_URL,
-    grant_type: "authorization_code"
-  });
-
-  const { access_token: accessToken } = data;
-
-  const { data: profile } = await axios.get(
-    "https://www.googleapis.com/oauth2/v1/userinfo",
-    {
-      headers: {
-        Authorization: `Bearer ${accessToken}`
-      }
-    }
-  );
-
-  const { email, name } = profile;
-
-  const response = await userSignupService({ fullName: name, email });
+  const response = await googleRedirectService(code as string);
 
   if (response.error !== null) {
     res.statusCode = response.error.statusCode;
@@ -174,52 +147,19 @@ export const handleGetGithubRedirect = async (
   res: Response,
   next: NextFunction
 ): Promise<void> => {
-  const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID;
-  const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET;
-
   const { code } = req.query;
 
-  try {
-    const { data }: { data: string } = await axios.post(
-      "https://github.com/login/oauth/access_token",
-      {
-        client_id: GITHUB_CLIENT_ID,
-        client_secret: GITHUB_CLIENT_SECRET,
-        code
-      }
-    );
-
-    const accessToken = data.split("=")[1].split("&")[0];
-
-    const axiosGetUserInfoHeaders = {
-      headers: {
-        Authorization: "Bearer " + accessToken
-      }
-    };
-    const promises = Promise.all([
-      axios.get("https://api.github.com/user", axiosGetUserInfoHeaders),
-      axios.get("https://api.github.com/user/emails", axiosGetUserInfoHeaders)
-    ]);
-
-    const response = await promises;
-    const {
-      data: { name }
-    } = response[0];
-    const { data: userEmails } = response[1];
-    const primaryEmail: string = userEmails.find((e: any) => e.primary)?.email;
-
-    const result = await userSignupService({
-      fullName: name,
-      email: primaryEmail
-    });
-
-    if (result.error !== null) {
-      res.statusCode = result.error.statusCode;
-      next(new Error(result.error.message));
-    }
-
-    res.status(201).json(result);
-  } catch (err) {
-    res.status(500).send("Something went wrong");
+  if (code === undefined) {
+    res.statusCode = 500;
+    next(new Error("Something went wrong"));
   }
+
+  const result = await gitHubRedirectService(code as string);
+
+  if (result.error !== null) {
+    res.statusCode = result.error.statusCode;
+    next(new Error(result.error.message));
+  }
+
+  res.status(201).json(result);
 };

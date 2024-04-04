@@ -1,12 +1,13 @@
 import { hash } from "bcrypt";
 import type { SendEmailRequest } from "aws-sdk/clients/ses";
-import jwt from "jsonwebtoken";
+import axios from "axios";
 
 import User from "../models/user";
 import OTP from "../models/otp";
 import type { IStandardResponse, ISignupInput, IUser } from "../types";
 import { generateUniqueNumber } from "../utils/common";
 import { AWS } from "../config/aws-sdk";
+import { generateJwtToken } from "../utils/jwt";
 
 export const userSignupService = async (
   signupDetails: ISignupInput
@@ -199,20 +200,97 @@ export const verifyOtpService = async (
   await User.updateOne({ email }, { emailVerified: true });
 
   // generate JWT
-  if (process.env.JWT_SECRET === undefined) {
-    return {
-      error: {
-        statusCode: 500,
-        message: "JWT_SECRET is missing in env variables"
-      },
-      result: null
-    };
-  }
-
-  const token = jwt.sign({ email }, process.env.JWT_SECRET);
+  const token = generateJwtToken({ email });
 
   return {
     result: { token },
     error: null
   };
+};
+
+export const googleRedirectService = async (
+  code: string
+): Promise<IStandardResponse<IUser>> => {
+  try {
+    const { data } = await axios.post("https://oauth2.googleapis.com/token", {
+      code,
+      client_id: process.env.GOOGLE_CLIENT_ID,
+      client_secret: process.env.GOOGLE_CLIENT_SECRET,
+      redirect_uri: process.env.GOOGLE_REDIRECT_URL,
+      grant_type: "authorization_code"
+    });
+
+    const { access_token: accessToken } = data;
+
+    const { data: profile } = await axios.get(
+      "https://www.googleapis.com/oauth2/v1/userinfo",
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`
+        }
+      }
+    );
+
+    const { email, name } = profile;
+
+    const response = await userSignupService({ fullName: name, email });
+    return response;
+  } catch (err) {
+    return {
+      error: {
+        statusCode: 500,
+        message: (err as Error).message
+      },
+      result: null
+    };
+  }
+};
+
+export const gitHubRedirectService = async (
+  code: string
+): Promise<IStandardResponse<IUser>> => {
+  try {
+    const { data }: { data: string } = await axios.post(
+      "https://github.com/login/oauth/access_token",
+      {
+        client_id: process.env.GITHUB_CLIENT_ID,
+        client_secret: process.env.GITHUB_CLIENT_SECRET,
+        code
+      }
+    );
+
+    const accessToken = data.split("=")[1].split("&")[0];
+
+    const axiosGetUserInfoHeaders = {
+      headers: {
+        Authorization: "Bearer " + accessToken
+      }
+    };
+    const promises = Promise.all([
+      axios.get("https://api.github.com/user", axiosGetUserInfoHeaders),
+      axios.get("https://api.github.com/user/emails", axiosGetUserInfoHeaders)
+    ]);
+
+    const response = await promises;
+    const {
+      data: { name }
+    } = response[0];
+    const { data: userEmails } = response[1];
+    const primaryEmail: string = userEmails.find((e: any) => e.primary)?.email;
+
+    const result = await userSignupService({
+      fullName: name,
+      email: primaryEmail
+    });
+
+    return result;
+  } catch (err) {
+    return {
+      error: {
+        statusCode: 500,
+        message: (err as Error).message
+      },
+      result: null
+    };
+  }
 };
