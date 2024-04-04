@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
-import { verify } from "jsonwebtoken";
-import type { JwtPayload } from "jsonwebtoken";
+
+import { verifyJwtToken } from "../utils/jwt";
 
 export const isAuthenticated = (
   req: Request,
@@ -16,7 +16,7 @@ export const isAuthenticated = (
   }
 
   try {
-    const decoded = verify(token, process.env.JWT_SECRET!) as JwtPayload;
+    const decoded = verifyJwtToken(token);
     req.params.ownerEmail = decoded.email;
     next();
   } catch (error) {
