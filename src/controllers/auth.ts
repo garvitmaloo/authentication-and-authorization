@@ -124,10 +124,20 @@ export const handleGetGoogleRedirect = async (
     return;
   }
 
-  res.status(201).json({
-    result: response.result,
-    error: null
-  });
+  const jwtToken = response.result?.token;
+
+  res
+    .status(201)
+    .cookie("token", jwtToken, {
+      maxAge: 600000 // 10 minutes
+    })
+    .json({
+      result: {
+        name: response.result?.fullName,
+        email: response.result?.email
+      },
+      error: null
+    });
 };
 
 export const handleGetGithubLogin = async (
@@ -161,5 +171,18 @@ export const handleGetGithubRedirect = async (
     next(new Error(result.error.message));
   }
 
-  res.status(201).json(result);
+  const jwtToken = result.result?.token;
+
+  res
+    .status(201)
+    .cookie("token", jwtToken, {
+      maxAge: 600000 // 10 minutes
+    })
+    .json({
+      error: null,
+      result: {
+        name: result.result?.fullName,
+        email: result.result?.email
+      }
+    });
 };

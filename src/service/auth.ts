@@ -210,7 +210,7 @@ export const verifyOtpService = async (
 
 export const googleRedirectService = async (
   code: string
-): Promise<IStandardResponse<IUser>> => {
+): Promise<IStandardResponse<IUser & { token: string }>> => {
   try {
     const { data } = await axios.post("https://oauth2.googleapis.com/token", {
       code,
@@ -234,7 +234,19 @@ export const googleRedirectService = async (
     const { email, name } = profile;
 
     const response = await userSignupService({ fullName: name, email });
-    return response;
+
+    // generate jwt token
+    const token = generateJwtToken({ email });
+
+    return {
+      error: response.error,
+      result: {
+        email,
+        fullName: name,
+        emailVerified: true,
+        token
+      }
+    };
   } catch (err) {
     return {
       error: {
@@ -248,7 +260,7 @@ export const googleRedirectService = async (
 
 export const gitHubRedirectService = async (
   code: string
-): Promise<IStandardResponse<IUser>> => {
+): Promise<IStandardResponse<IUser & { token: string }>> => {
   try {
     const { data }: { data: string } = await axios.post(
       "https://github.com/login/oauth/access_token",
@@ -283,7 +295,18 @@ export const gitHubRedirectService = async (
       email: primaryEmail
     });
 
-    return result;
+    // generate jwt token
+    const token = generateJwtToken({ email: primaryEmail });
+
+    return {
+      error: result.error,
+      result: {
+        fullName: name,
+        email: primaryEmail,
+        emailVerified: true,
+        token
+      }
+    };
   } catch (err) {
     return {
       error: {
