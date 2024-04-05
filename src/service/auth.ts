@@ -1,12 +1,11 @@
 import { hash } from "bcrypt";
-import type { SendEmailRequest } from "aws-sdk/clients/ses";
 import axios from "axios";
+import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses";
 
 import User from "../models/user";
 import OTP from "../models/otp";
 import type { IStandardResponse, ISignupInput, IUser } from "../types";
 import { generateUniqueNumber } from "../utils/common";
-import { AWS } from "../config/aws-sdk";
 import { generateJwtToken } from "../utils/jwt";
 
 export const userSignupService = async (
@@ -107,27 +106,36 @@ export const sendOtpService = async (
     }
 
     // send otp via email - will not send email in "sandbox" mode. Use "production" mode for sending email.
-    const params: SendEmailRequest = {
-      Destination: {
-        ToAddresses: [email]
-      },
-      Message: {
-        Body: {
-          Text: {
+    // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+    const createSendEmailCommand = (
+      toAddress: string,
+      fromAddress: string
+    ): SendEmailCommand =>
+      new SendEmailCommand({
+        Destination: {
+          ToAddresses: [toAddress]
+        },
+        Message: {
+          Body: {
+            Text: {
+              Charset: "UTF-8",
+              Data: `Your OTP is ${otp}`
+            }
+          },
+          Subject: {
             Charset: "UTF-8",
-            Data: `Your OTP is ${otp}`
+            Data: "OTP for Signup"
           }
         },
-        Subject: {
-          Charset: "UTF-8",
-          Data: "OTP for Signup"
-        }
-      },
-      Source: process.env.SOURCE_EMAIL_ADDRESS
-    };
+        Source: fromAddress
+      });
 
-    const sendEmailPromise = new AWS.SES().sendEmail(params).promise();
-    await sendEmailPromise;
+    const client = new SESClient({ region: process.env.AWS_REGION });
+    const command = createSendEmailCommand(
+      email,
+      process.env.SOURCE_EMAIL_ADDRESS
+    );
+    await client.send(command);
 
     // make/update entry in database
     const otpRecord = await OTP.findOne({ email });
