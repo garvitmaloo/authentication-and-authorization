@@ -4,7 +4,7 @@ import type { Request, Response, NextFunction } from "express";
 import { anyOneConditionTrue } from "../utils/common";
 import type { ISignupInput } from "../types";
 
-const validateSignupInput = (
+export const validateSignupInput = (
   req: Request,
   res: Response,
   next: NextFunction
@@ -38,4 +38,29 @@ const validateSignupInput = (
   next();
 };
 
-export default validateSignupInput;
+export const validateNewResourceInput = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void => {
+  const { name, type }: { name: string; type: string } = req.body;
+  const ownerEmail: string = req.params.ownerEmail; // from isAuthenticated middleware
+
+  const conditions = [
+    name === undefined,
+    name.trim() === "",
+    type === undefined,
+    type.trim() === "",
+    ownerEmail === undefined,
+    ownerEmail.trim() === "",
+    !validator.isEmail(ownerEmail)
+  ];
+
+  if (anyOneConditionTrue(conditions)) {
+    res.statusCode = 400;
+    next(new Error("Invalid input"));
+    return;
+  }
+
+  next();
+};

@@ -7,7 +7,7 @@ import {
   handleDeleteResource
 } from "../controllers/resources";
 import { isAuthenticated } from "../middleware/authentication";
-import validateNewResourceInput from "../middleware/validateNewResourceInput";
+import { validateNewResourceInput } from "../middleware/validation";
 
 const resourcesRouter = Router();
 

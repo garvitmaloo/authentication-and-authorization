@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-misused-promises */
 import express from "express";
 
-import validateSignupInput from "../middleware/validateSignupInput";
+import { validateSignupInput } from "../middleware/validation";
 import {
   handlePostSignup,
   handlePostOtp,
