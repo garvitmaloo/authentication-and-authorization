@@ -3,7 +3,8 @@ import { Router } from "express";
 
 import {
   handleGetAllResource,
-  handlePostNewResource
+  handlePostNewResource,
+  handleDeleteResource
 } from "../controllers/resources";
 import { isAuthenticated } from "../middleware/authentication";
 import validateNewResourceInput from "../middleware/validateNewResourceInput";
@@ -18,5 +19,7 @@ resourcesRouter.post(
   validateNewResourceInput,
   handlePostNewResource
 );
+
+resourcesRouter.delete("/:id", isAuthenticated, handleDeleteResource);
 
 export { resourcesRouter };

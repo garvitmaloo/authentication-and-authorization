@@ -1,4 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
+import type { Document } from "mongoose";
 
 import { verifyJwtToken } from "../utils/jwt";
 
@@ -23,4 +24,11 @@ export const isAuthenticated = (
     res.statusCode = 400;
     next(new Error("Invalid Token"));
   }
+};
+
+export const isAuthorized = (
+  ownerEmail: string,
+  document: Document & { ownerEmail: string }
+): boolean => {
+  return document.ownerEmail === ownerEmail;
 };

@@ -1,7 +1,8 @@
 import type { NextFunction, Request, Response } from "express";
 import {
   fetchAllResourcesService,
-  createNewResource
+  createNewResource,
+  deleteResourceService
 } from "../service/resources";
 import type { IResource } from "../types";
 
@@ -41,4 +42,23 @@ export const handlePostNewResource = async (
   }
 
   res.status(201).json(response);
+};
+
+export const handleDeleteResource = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  const resourceId = req.params.id;
+  const ownerEmail = req.params.ownerEmail; // from middleware
+
+  const response = await deleteResourceService(resourceId, ownerEmail);
+
+  if (response.error !== null) {
+    res.statusCode = response.error.statusCode;
+    next(new Error(response.error.message));
+    return;
+  }
+
+  res.status(200).json(response);
 };
